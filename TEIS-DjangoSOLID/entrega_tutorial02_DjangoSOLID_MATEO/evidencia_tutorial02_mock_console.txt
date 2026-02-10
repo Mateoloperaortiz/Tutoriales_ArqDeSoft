@@ -1,0 +1,3 @@
+[DEBUG] Mock Payment: Procesando pago de $154.70 sin cargo real.
+STATUS 200
+Orden 9 procesada exitosamente.
