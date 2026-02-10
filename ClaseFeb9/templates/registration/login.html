@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>Iniciar sesión</h1>
+
+<form method="post">
+  {% csrf_token %}
+  {{ form.as_p }}
+  <div class="form-actions">
+    <button type="submit" class="btn btn-primary">Entrar</button>
+    <a href="{% url 'blog:list' %}" class="btn btn-ghost">Cancelar</a>
+  </div>
+</form>
+{% endblock %}

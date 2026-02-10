@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+
+{% block content %}
+<article>
+  <h1>{{ object.title }}</h1>
+  <p class="meta">{{ object.created|date:"Y-m-d" }}</p>
+  <div class="article-content">{{ object.content }}</div>
+
+  {% if user.is_staff %}
+  <div class="article-actions">
+    <a href="{% url 'blog:list' %}" class="btn btn-ghost">← Volver</a>
+    <a href="{% url 'blog:update' object.pk %}" class="btn btn-primary">Editar</a>
+    <a href="{% url 'blog:delete' object.pk %}" class="btn btn-danger">Eliminar</a>
+  </div>
+  {% else %}
+  <div class="article-actions">
+    <a href="{% url 'blog:list' %}" class="btn btn-ghost">← Volver</a>
+  </div>
+  {% endif %}
+</article>
+{% endblock %}
