@@ -1,0 +1,11 @@
+15 objects imported automatically (use -v 2 for details).
+
+EVIDENCIA TUTORIAL 03 - API + HTML
+Libro ID: 9 | Titulo: Libro Evidencia Tutorial03
+POST /api/v1/comprar/ status: 201
+POST /api/v1/comprar/ body: {'estado': 'exito', 'mensaje': 'Orden 14 procesada exitosamente.'}
+Stock en vista HTML /inventario/ antes: 2
+Stock en vista HTML /inventario/ despues: 1
+Lineas en pagos_locales_MATEO.log antes: 11
+Lineas en pagos_locales_MATEO.log despues: 12
+Ultima linea log: [2026-02-17 00:56:03.224221] Transaccion exitosa por: $89.25

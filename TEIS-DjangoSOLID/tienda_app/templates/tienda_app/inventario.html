@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<body>
+    <h1>Inventario Actual</h1>
+    <table border="1" cellpadding="6" cellspacing="0">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Libro</th>
+                <th>Precio</th>
+                <th>Stock</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in items %}
+            <tr>
+                <td>{{ item.libro.id }}</td>
+                <td>{{ item.libro.titulo }}</td>
+                <td>{{ item.libro.precio }}</td>
+                <td>{{ item.stock_actual }}</td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="4">No hay libros registrados.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</body>
+</html>

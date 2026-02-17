@@ -10,6 +10,21 @@ from .infra.factories import PaymentFactory
 from .infra.gateways import BancoNacionalProcesador
 
 
+def inventario_view(request):
+    libros = Libro.objects.select_related("inventario").order_by("id")
+    items = []
+    for libro in libros:
+        stock_actual = libro.inventario.cantidad if hasattr(libro, "inventario") else 0
+        items.append(
+            {
+                "libro": libro,
+                "stock_actual": stock_actual,
+            }
+        )
+
+    return render(request, "tienda_app/inventario.html", {"items": items})
+
+
 def compra_rapida_fbv(request, libro_id):
     libro = get_object_or_404(Libro, id=libro_id)
 

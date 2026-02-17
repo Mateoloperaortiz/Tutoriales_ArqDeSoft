@@ -1,8 +1,10 @@
+import json
 import os
 from decimal import Decimal
 from unittest.mock import patch
 
 from django.test import TestCase
+from django.urls import reverse
 
 from .domain.logic import CalculadorImpuestos
 from .infra.factories import MockPaymentProcessor, PaymentFactory
@@ -120,3 +122,110 @@ class PaymentFactoryTestCase(TestCase):
             os.environ.pop("PAYMENT_PROVIDER", None)
             procesador = PaymentFactory.get_processor()
             self.assertIsInstance(procesador, BancoNacionalProcesador)
+
+
+class CompraAPITestCase(TestCase):
+    def setUp(self):
+        self.libro = Libro.objects.create(titulo="API Libro", precio=Decimal("80.00"))
+        Inventario.objects.create(libro=self.libro, cantidad=1)
+        self.url = reverse("api_comprar")
+
+    @patch("tienda_app.api.views.PaymentFactory.get_processor")
+    def test_api_compra_exitosa_descuenta_stock(self, mock_get_processor):
+        mock_get_processor.return_value = ProcesadorPagoExitoso()
+
+        response = self.client.post(
+            self.url,
+            data=json.dumps(
+                {
+                    "libro_id": self.libro.id,
+                    "direccion_envio": "Calle 123",
+                }
+            ),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.json()["estado"], "exito")
+        self.assertEqual(Orden.objects.count(), 1)
+        self.assertEqual(Inventario.objects.get(libro=self.libro).cantidad, 0)
+        mock_get_processor.assert_called_once()
+
+    def test_api_valida_payload(self):
+        response = self.client.post(
+            self.url,
+            data=json.dumps({"direccion_envio": "Sin libro"}),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("libro_id", response.json())
+
+    def test_api_retorna_404_si_libro_no_existe(self):
+        response = self.client.post(
+            self.url,
+            data=json.dumps(
+                {
+                    "libro_id": 99999,
+                    "direccion_envio": "Calle 404",
+                }
+            ),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(response.json()["error"], "Libro no encontrado.")
+
+    @patch("tienda_app.api.views.PaymentFactory.get_processor")
+    def test_api_retorna_409_si_no_hay_stock(self, mock_get_processor):
+        mock_get_processor.return_value = ProcesadorPagoExitoso()
+        inventario = Inventario.objects.get(libro=self.libro)
+        inventario.cantidad = 0
+        inventario.save(update_fields=["cantidad"])
+
+        response = self.client.post(
+            self.url,
+            data=json.dumps(
+                {
+                    "libro_id": self.libro.id,
+                    "direccion_envio": "Calle sin stock",
+                }
+            ),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 409)
+        self.assertIn("No hay existencias", response.json()["error"])
+
+    @patch("tienda_app.api.views.PaymentFactory.get_processor")
+    def test_api_compra_refleja_cambio_en_vista_html_inventario(self, mock_get_processor):
+        mock_get_processor.return_value = ProcesadorPagoExitoso()
+        inventario_url = reverse("inventario")
+
+        before_response = self.client.get(inventario_url)
+        before_stock = next(
+            item["stock_actual"]
+            for item in before_response.context["items"]
+            if item["libro"].id == self.libro.id
+        )
+
+        self.client.post(
+            self.url,
+            data=json.dumps(
+                {
+                    "libro_id": self.libro.id,
+                    "direccion_envio": "Calle HTML",
+                }
+            ),
+            content_type="application/json",
+        )
+
+        after_response = self.client.get(inventario_url)
+        after_stock = next(
+            item["stock_actual"]
+            for item in after_response.context["items"]
+            if item["libro"].id == self.libro.id
+        )
+
+        self.assertEqual(before_stock, 1)
+        self.assertEqual(after_stock, 0)
