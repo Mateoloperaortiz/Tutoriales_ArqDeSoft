@@ -1,75 +1,158 @@
-# 🚀 Django Clean Monolith: De Spaghetti a Grado Empresarial
+# Django Clean Monolith Dockerizado
 
-Este proyecto es una guía práctica para transformar una aplicación de Django tradicional en un sistema con arquitectura de capas, siguiendo principios de ingeniería de software utilizados en consultoría de alto nivel.
+Este proyecto ejecuta la aplicacion Django de la tienda sobre Docker, PostgreSQL 18 y Gunicorn. El runtime oficial pasa a ser el stack de `docker compose`.
 
----
+## Versiones fijadas
 
-## 🏗️ Resumen de la Arquitectura
+- Python `3.14-slim`
+- PostgreSQL `18.3`
+- Django `6.0.3`
+- Django REST Framework `3.16.1`
+- Psycopg `3.3.3`
+- Gunicorn `25.1.0`
 
-Hemos separado las responsabilidades para evitar el antipatrón de la "Vista Gorda" (Fat View), organizando el código en las siguientes capas:
+## Requisitos
 
-| Capa | Ubicación | Responsabilidad |
-| :--- | :--- | :--- |
-| **Presentación** | `views.py` | Recibir Requests, delegar al servicio y retornar Responses (HTML/JSON). |
-| **Servicio** | `services.py` | Orquestar el flujo de negocio. Es el "Cerebro" que conecta el dominio con los datos. |
-| **Dominio** | `domain/` | Contiene la lógica pura (Impuestos, validaciones) e interfaces (Contratos). |
-| **Infraestructura** | `infra/` | Implementaciones técnicas externas (Pasarelas de pago, logs, APIs). |
-| **Datos** | `models.py` | Definición de tablas y persistencia mediante el ORM de Django. |
+- Docker Desktop o Docker Engine con Docker Compose
+- Un archivo `.env` basado en `.env.example`
 
+## Configuracion
 
+1. Cree el archivo de entorno:
 
----
+   ```bash
+   cp .env.example .env
+   ```
 
-## 🛡️ Principios SOLID Aplicados
+2. Revise al menos estas variables:
 
-1. **S - Single Responsibility:** Cada clase tiene una sola razón para existir. El `CalculadorImpuestos` no sabe de bases de datos; la `View` no sabe de impuestos.
-2. **O - Open/Closed:** El sistema está abierto a nuevas reglas de negocio (ej. nuevos impuestos) sin necesidad de modificar el flujo principal de compra.
-3. **L - Liskov Substitution:** Podemos intercambiar el `BancoNacionalProcesador` por cualquier otro procesador que siga la interfaz `ProcesadorPago`.
-4. **I - Interface Segregation:** Las interfaces en `domain/interfaces.py` son específicas y minimalistas.
-5. **D - Dependency Inversion:** La capa de servicio no depende de una implementación de banco concreta, sino de una abstracción (Interfaz).
+   - `SECRET_KEY`
+   - `DEBUG`
+   - `ALLOWED_HOSTS`
+   - `DB_NAME`
+   - `DB_USER`
+   - `DB_PASSWORD`
+   - `DB_HOST`
+   - `DB_PORT`
 
----
+Para desarrollo local con Docker, el `.env.example` ya trae valores funcionales.
 
-## 🛠️ Instalación y Configuración
+## Levantar el proyecto con Docker
 
-Siga estos pasos para poner en marcha el entorno local:
+Construya y levante los servicios:
 
-### 1. Clonar y Preparar Entorno
 ```bash
-git clone [https://github.com/tu-usuario/django-clean-monolith.git](https://github.com/tu-usuario/django-clean-monolith.git)
-cd django-clean-monolith
-python -m venv venv
-source venv/bin/activate  # Windows: venv\Scripts\activate
-pip install django
+docker compose up --build
 ```
-### 2. Base de datos
+
+La aplicacion quedara disponible en:
+
+- Inventario: `http://localhost:8000/inventario/`
+- API: `http://localhost:8000/api/v1/comprar/`
+
+El contenedor `web` espera a PostgreSQL, aplica migraciones y luego arranca Gunicorn.
+
+## Ejecutar tests en el contenedor
+
 ```bash
-python manage.py makemigrations
-python manage.py migrate
+docker compose run --rm web python manage.py test
 ```
 
-### 3. Crear Datos e Prueba
-Ejecute el shell de Django: python manage.py shell
+## Sembrar datos de prueba
+
+Ejecute el script existente dentro del contenedor:
+
 ```bash
-from tienda.models import Libro, Inventario
-l = Libro.objects.create(titulo="Arquitectura Limpia", precio=250.0)
-Inventario.objects.create(libro=l, cantidad=5)
+docker compose exec web sh -c "python manage.py shell < seed_data.py"
 ```
 
-### 4. Ejecutar
+El comando imprime el `libro_id` creado o actualizado. Use ese valor para probar la API.
+
+## Probar la API
+
+Ejemplo de compra exitosa:
+
 ```bash
-python manage.py runserver
+curl -X POST http://localhost:8000/api/v1/comprar/ \
+  -H "Content-Type: application/json" \
+  -d '{"libro_id": <LIBRO_ID>, "direccion_envio": "Calle 123"}'
 ```
 
-## 📂 Estructura de Archivos (App: tienda_app)
-```
-tienda/
-├── domain/           # Lógica pura e Interfaces
-│   ├── logic.py      # SRP: Cálculo de IVA
-│   └── interfaces.py # DIP: Contrato de Pago
-├── infra/            # Detalles técnicos
-│   └── gateways.py   # Implementación de Banco (Log local)
-├── services.py       # Capa de Servicio (Orquestación)
-├── views.py          # Class-Based Views
-└── models.py         # Modelos de Django
+Respuesta esperada:
 
+```json
+{
+  "estado": "exito",
+  "mensaje": "Orden X procesada exitosamente."
+}
+```
+
+Si el libro no existe, la API responde `404`. Si no hay stock, responde `409`.
+
+## Despliegue manual en EC2
+
+1. Cree una instancia Amazon Linux 2023 `t2.micro`.
+2. Abra los puertos `22` y `8000` en el Security Group.
+3. Conectese por SSH e instale Docker:
+
+   ```bash
+   sudo dnf update -y
+   sudo dnf install -y git docker
+   sudo systemctl enable --now docker
+   sudo usermod -aG docker ec2-user
+   exit
+   ```
+
+4. Vuelva a entrar por SSH para tomar el nuevo grupo.
+5. Clone el repositorio:
+
+   ```bash
+   git clone <SU_REPOSITORIO>
+   cd TEIS-DjangoSOLID
+   ```
+
+6. Cree `.env` a partir de `.env.example` y ajuste:
+
+   - `SECRET_KEY` por un valor real
+   - `DEBUG=False`
+   - `ALLOWED_HOSTS=<IP_PUBLICA_EC2>,localhost,127.0.0.1`
+
+7. Levante los contenedores:
+
+   ```bash
+   docker compose up -d --build
+   ```
+
+8. Cargue los datos de prueba:
+
+   ```bash
+   docker compose exec web sh -c "python manage.py shell < seed_data.py"
+   ```
+
+9. Pruebe la API desde su equipo:
+
+   ```bash
+   curl -X POST http://<IP_PUBLICA_EC2>:8000/api/v1/comprar/ \
+     -H "Content-Type: application/json" \
+     -d '{"libro_id": <LIBRO_ID>, "direccion_envio": "AWS Academy"}'
+   ```
+
+## Comandos utiles
+
+- Ver logs:
+
+  ```bash
+  docker compose logs -f
+  ```
+
+- Bajar servicios:
+
+  ```bash
+  docker compose down
+  ```
+
+- Bajar servicios y borrar volumen de PostgreSQL:
+
+  ```bash
+  docker compose down -v
+  ```

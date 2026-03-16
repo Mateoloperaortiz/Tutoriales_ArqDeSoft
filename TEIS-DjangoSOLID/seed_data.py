@@ -1,16 +1,20 @@
-from tienda_app.models import Libro, Inventario
+from decimal import Decimal
 
-# Clear existing to avoid dupes if run multiple times
-Libro.objects.filter(titulo="Clean Code en Python").delete()
+from tienda_app.models import Inventario, Libro
 
-l = Libro.objects.create(
+
+libro, created = Libro.objects.update_or_create(
     titulo="Clean Code en Python",
-    precio=150.0
+    defaults={"precio": Decimal("150.00")},
 )
 
-Inventario.objects.create(
-    libro=l,
-    cantidad=10
+inventario, _ = Inventario.objects.update_or_create(
+    libro=libro,
+    defaults={"cantidad": 10},
 )
 
-print("Datos creados exitosamente")
+accion = "creado" if created else "actualizado"
+print(
+    f"Seed completado: libro {accion} con id={libro.id}, "
+    f"precio={libro.precio}, stock={inventario.cantidad}"
+)
