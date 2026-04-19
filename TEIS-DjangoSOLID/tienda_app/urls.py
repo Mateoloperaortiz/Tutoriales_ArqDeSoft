@@ -1,7 +1,7 @@
-from django.views.generic import RedirectView
 from django.urls import path
 
 from .views import (
+    catalogo_view,
     compra_rapida_fbv,
     CompraRapidaView,
     CompraRapidaServiceView,
@@ -11,7 +11,7 @@ from .views import (
 from tienda_app.api.views import CompraAPIView
 
 urlpatterns = [
-    path("", RedirectView.as_view(pattern_name="inventario", permanent=False), name="home"),
+    path("", catalogo_view, name="home"),
     path("inventario/", inventario_view, name="inventario"),
     path("compra-rapida-fbv/<int:libro_id>/", compra_rapida_fbv, name="compra_rapida_fbv"),
     path("compra-rapida-cbv/<int:libro_id>/", CompraRapidaView.as_view(), name="compra_rapida_cbv"),

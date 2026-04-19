@@ -21,6 +21,20 @@ def _build_purchase_context(libro, **extra_context):
     return context
 
 
+def _build_catalog_items():
+    libros = Libro.objects.select_related("inventario").order_by("id")
+    items = []
+    for libro in libros:
+        stock_actual = libro.inventario.cantidad if hasattr(libro, "inventario") else 0
+        items.append(
+            {
+                "libro": libro,
+                "stock_actual": stock_actual,
+            }
+        )
+    return items
+
+
 def _crear_orden_legacy(libro, total):
     # Compatibilidad temporal: las rutas legacy siguen rellenando Orden.libro.
     orden = Orden.objects.create(libro=libro, total=total)
@@ -33,19 +47,12 @@ def _crear_orden_legacy(libro, total):
     return orden
 
 
-def inventario_view(request):
-    libros = Libro.objects.select_related("inventario").order_by("id")
-    items = []
-    for libro in libros:
-        stock_actual = libro.inventario.cantidad if hasattr(libro, "inventario") else 0
-        items.append(
-            {
-                "libro": libro,
-                "stock_actual": stock_actual,
-            }
-        )
+def catalogo_view(request):
+    return render(request, "tienda_app/catalogo.html", {"items": _build_catalog_items()})
 
-    return render(request, "tienda_app/inventario.html", {"items": items})
+
+def inventario_view(request):
+    return render(request, "tienda_app/inventario.html", {"items": _build_catalog_items()})
 
 
 def compra_rapida_fbv(request, libro_id):

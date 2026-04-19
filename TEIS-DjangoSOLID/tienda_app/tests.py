@@ -289,10 +289,13 @@ class CompraHTMLViewTestCase(TestCase):
         self.libro = Libro.objects.create(titulo="Libro HTML", precio=Decimal("90.00"))
         Inventario.objects.create(libro=self.libro, cantidad=2)
 
-    def test_home_redirige_a_inventario(self):
+    def test_home_renderiza_catalogo(self):
         response = self.client.get(reverse("home"))
 
-        self.assertRedirects(response, reverse("inventario"))
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "tienda_app/catalogo.html")
+        self.assertContains(response, "Catálogo")
+        self.assertContains(response, self.libro.titulo)
 
     def test_compra_regular_get_usa_template_dedicado(self):
         response = self.client.get(reverse("finalizar_compra", args=[self.libro.id]))
