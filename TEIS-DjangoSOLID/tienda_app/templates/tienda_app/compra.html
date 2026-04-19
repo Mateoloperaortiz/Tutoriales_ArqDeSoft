@@ -1,6 +1,6 @@
 {% extends 'tienda_app/base.html' %}
 
-{% block title %}Procesar Compra - Tienda Grado Empresarial{% endblock %}
+{% block title %}Procesar Compra - Tienda EAFIT{% endblock %}
 
 {% block content %}
 <div class="max-w-md mx-auto mt-8 sm:mt-16">
@@ -10,8 +10,9 @@
         <div class="absolute -bottom-32 -left-32 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none"></div>
         
         <div class="text-center mb-8 relative z-10">
-            <h1 class="text-3xl font-bold text-white mb-2 tracking-tight">Procesar <span class="text-primary-400 font-light">Compra</span></h1>
-            <p class="text-slate-400 text-sm">Finaliza tu orden de manera segura.</p>
+            <p class="badge-accent mx-auto mb-4 inline-flex rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.25em]">Tienda EAFIT</p>
+            <h1 class="text-3xl font-bold text-high mb-2 tracking-tight">Procesar <span class="text-primary-300 font-light">Compra</span></h1>
+            <p class="text-mid text-sm">Finaliza tu orden del laboratorio de Arquitectura de Software 2026-1.</p>
         </div>
 
         {% if mensaje_exito %}
@@ -21,11 +22,11 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
                     </svg>
                 </div>
-                <h3 class="text-emerald-400 font-bold text-lg mb-2">¡Compra Exitosa!</h3>
-                <p class="text-emerald-200/80 text-sm mb-6">{{ mensaje_exito }}</p>
+                <h3 class="text-emerald-300 font-bold text-lg mb-2">¡Compra Exitosa!</h3>
+                <p class="text-emerald-100 text-sm mb-6">{{ mensaje_exito }}</p>
                 
-                <a href="/" class="inline-flex items-center justify-center w-full px-4 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-medium rounded-xl transition-all duration-300">
-                    Volver a la tienda
+                <a href="/" class="inline-flex items-center justify-center w-full px-4 py-3 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold rounded-xl transition-all duration-300">
+                    Volver al catálogo
                 </a>
             </div>
         {% else %}
@@ -35,20 +36,20 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                     </svg>
                     <div>
-                        <h4 class="text-red-400 font-medium text-sm">Error en el proceso</h4>
-                        <p class="text-red-300/80 text-xs mt-1">{{ error }}</p>
+                        <h4 class="text-red-300 font-medium text-sm">Error en el proceso</h4>
+                        <p class="text-red-100 text-xs mt-1">{{ error }}</p>
                     </div>
                 </div>
             {% endif %}
 
-            <div class="bg-slate-800/40 rounded-2xl p-6 mb-8 border border-white/5 relative z-10 backdrop-blur-sm">
+            <div class="bg-slate-800/60 rounded-2xl p-6 mb-8 border border-white/10 relative z-10 backdrop-blur-sm">
                 <div class="flex items-start justify-between mb-4 pb-4 border-b border-light/5">
                     <div class="pr-4">
-                        <h3 class="text-white font-medium text-lg leading-tight">{{ libro.titulo }}</h3>
-                        <p class="text-slate-400 text-xs mt-1.5 uppercase tracking-wider font-semibold">Libro Físico</p>
+                        <h3 class="text-high font-medium text-lg leading-tight">{{ libro.titulo }}</h3>
+                        <p class="text-soft text-xs mt-1.5 uppercase tracking-wider font-semibold">Caso de estudio</p>
                     </div>
-                    <div class="w-12 h-16 bg-gradient-to-br from-indigo-500/20 to-purple-600/20 rounded shadow-inner flex items-center justify-center border border-white/10 shrink-0">
-                        <svg class="w-6 h-6 text-indigo-400/80" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <div class="w-12 h-16 bg-gradient-to-br from-primary-400/20 to-teal-400/20 rounded shadow-inner flex items-center justify-center border border-white/10 shrink-0">
+                        <svg class="w-6 h-6 text-primary-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
                         </svg>
                     </div>
@@ -56,18 +57,18 @@
                 
                 <div class="space-y-3">
                     <div class="flex justify-between items-center text-sm">
-                        <span class="text-slate-400 font-medium">Subtotal</span>
-                        <span class="text-slate-300 font-semibold tabular-nums">${{ libro.precio }}</span>
+                        <span class="text-soft font-medium">Subtotal</span>
+                        <span class="text-mid font-semibold tabular-nums">${{ libro.precio }}</span>
                     </div>
                     <div class="flex justify-between items-center text-sm">
-                        <span class="text-slate-400 font-medium">Impuestos (IVA 19%)</span>
-                        <span class="text-emerald-400/90 text-xs font-semibold px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20">Incluido</span>
+                        <span class="text-soft font-medium">Impuestos (IVA 19%)</span>
+                        <span class="text-emerald-200 text-xs font-semibold px-2 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-400/25">Incluido</span>
                     </div>
                 </div>
                 
                 <div class="mt-5 pt-5 border-t border-white/5 flex justify-between items-end">
-                    <span class="text-white font-medium mb-1">Total Final</span>
-                    <span class="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 to-teal-300 tabular-nums tracking-tight">
+                    <span class="text-high font-medium mb-1">Total Final</span>
+                    <span class="text-4xl font-bold text-emerald-300 tabular-nums tracking-tight">
                         ${{ total|floatformat:2 }}
                     </span>
                 </div>
@@ -75,23 +76,23 @@
 
             <form method="post" class="relative z-10 w-full group">
                 {% csrf_token %}
-                <button type="submit" class="w-full flex items-center justify-center gap-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-semibold py-4 px-6 rounded-xl transition-all duration-300 shadow-[0_0_20px_rgba(16,185,129,0.3)] hover:shadow-[0_0_25px_rgba(16,185,129,0.5)] hover:-translate-y-1 overflow-hidden relative">
+                <button type="submit" class="w-full flex items-center justify-center gap-3 bg-gradient-to-r from-primary-300 to-teal-300 hover:from-primary-200 hover:to-teal-200 text-slate-950 font-semibold py-4 px-6 rounded-xl transition-all duration-300 shadow-[0_0_20px_rgba(51,168,255,0.28)] hover:shadow-[0_0_25px_rgba(94,234,212,0.35)] hover:-translate-y-1 overflow-hidden relative">
                     <div class="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-in-out z-0"></div>
                     <span class="relative z-10 flex items-center gap-2 text-sm sm:text-base">
                         <svg class="w-5 h-5 group-hover:animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                         </svg>
-                        Pago con Banco Nacional
+                        Confirmar orden del módulo
                     </span>
                 </button>
             </form>
             
             <div class="mt-6 text-center relative z-10">
-                <a href="{% url 'inventario' %}" class="inline-flex items-center gap-1.5 text-sm text-slate-400 hover:text-white transition-colors group">
+                <a href="{% url 'home' %}" class="inline-flex items-center gap-1.5 text-sm text-soft hover:text-white transition-colors group">
                     <svg class="w-4 h-4 group-hover:-translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
                     </svg>
-                    Cancelar y Volver
+                    Volver al catálogo
                 </a>
             </div>
         {% endif %}

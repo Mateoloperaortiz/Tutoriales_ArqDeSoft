@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Tienda Grado Empresarial{% endblock %}</title>
+    <title>{% block title %}Tienda EAFIT{% endblock %}</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Google Fonts: Outfit -->
@@ -22,17 +22,18 @@
                     },
                     colors: {
                         primary: {
-                            50: '#f0f9ff',
-                            100: '#e0f2fe',
-                            400: '#38bdf8',
-                            500: '#0ea5e9',
-                            600: '#0284c7',
-                            900: '#0c4a6e',
+                            50: '#eef8ff',
+                            100: '#d7efff',
+                            300: '#67c3ff',
+                            400: '#33a8ff',
+                            500: '#1683e6',
+                            600: '#0b66ba',
+                            900: '#0a315a',
                         },
                         dark: {
-                            bg: '#0f172a',
-                            surface: '#1e293b',
-                            border: '#334155'
+                            bg: '#081120',
+                            surface: '#14253d',
+                            border: '#36506f'
                         }
                     },
                     animation: {
@@ -56,69 +57,84 @@
     </script>
     <style>
         body {
-            background-color: #0f172a; /* Slate 900 */
-            color: #f8fafc; /* Slate 50 */
-            /* Add an elegant radial gradient overlay */
+            background-color: #081120;
+            color: #f8fafc;
             background-image: 
-                radial-gradient(circle at 15% 50%, rgba(14, 165, 233, 0.08), transparent 25%),
-                radial-gradient(circle at 85% 30%, rgba(139, 92, 246, 0.08), transparent 25%);
+                radial-gradient(circle at 12% 20%, rgba(34, 197, 255, 0.18), transparent 24%),
+                radial-gradient(circle at 88% 15%, rgba(45, 212, 191, 0.12), transparent 22%),
+                linear-gradient(180deg, rgba(8, 17, 32, 0.98), rgba(13, 23, 40, 0.98));
             background-attachment: fixed;
             min-height: 100vh;
         }
         .glass-panel {
-            background: rgba(30, 41, 59, 0.6);
+            background: rgba(17, 29, 48, 0.88);
             backdrop-filter: blur(16px);
             -webkit-backdrop-filter: blur(16px);
-            border: 1px solid rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(125, 164, 211, 0.18);
         }
         .glass-card {
-            background: linear-gradient(145deg, rgba(30, 41, 59, 0.8), rgba(15, 23, 42, 0.6));
+            background: linear-gradient(160deg, rgba(18, 32, 54, 0.96), rgba(10, 19, 35, 0.95));
             backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(133, 179, 232, 0.16);
+            box-shadow: 0 20px 60px rgba(2, 8, 23, 0.45);
+        }
+        .text-high {
+            color: #f8fbff;
+        }
+        .text-mid {
+            color: #d8e7fb;
+        }
+        .text-soft {
+            color: #a9c0db;
+        }
+        .badge-accent {
+            background: rgba(18, 131, 230, 0.18);
+            color: #cce8ff;
+            border: 1px solid rgba(103, 195, 255, 0.24);
+        }
+        .table-surface {
+            background: rgba(14, 25, 42, 0.82);
         }
         
-        /* Custom scrollbar for modern feel */
         ::-webkit-scrollbar {
             width: 8px;
             height: 8px;
         }
         ::-webkit-scrollbar-track {
-            background: #0f172a; 
+            background: #0b1528; 
         }
         ::-webkit-scrollbar-thumb {
-            background: #334155; 
+            background: #436487; 
             border-radius: 4px;
         }
         ::-webkit-scrollbar-thumb:hover {
-            background: #475569; 
+            background: #5d84ac; 
         }
     </style>
 </head>
 <body class="antialiased font-sans selection:bg-primary-500 selection:text-white flex flex-col min-h-screen">
     
     <!-- Navigation / Header -->
-    <nav class="sticky top-0 z-50 glass-panel border-b border-white/5 shadow-2xl shadow-black/40">
+    <nav class="sticky top-0 z-50 glass-panel border-b border-white/10 shadow-2xl shadow-black/40">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex items-center justify-between h-20">
-                <!-- Logo -->
                 <div class="flex-shrink-0">
                     <a href="{% url 'home' %}" class="flex items-center gap-3 group">
-                        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-primary-400 to-indigo-600 flex items-center justify-center text-white font-bold text-xl shadow-lg shadow-primary-500/20 group-hover:shadow-primary-500/40 group-hover:scale-105 transition-all duration-300">
+                        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-primary-300 to-primary-600 flex items-center justify-center text-white font-bold text-xl shadow-lg shadow-primary-500/30 group-hover:shadow-primary-400/40 group-hover:scale-105 transition-all duration-300">
                             TE
                         </div>
-                        <span class="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-slate-300 group-hover:to-white transition-colors duration-300 tracking-tight">
-                            Tienda <span class="font-light text-primary-400">Empresarial</span>
-                        </span>
+                        <div class="flex flex-col leading-tight">
+                            <span class="text-xl font-bold text-high tracking-tight">Tienda <span class="text-primary-300">EAFIT</span></span>
+                            <span class="text-[11px] font-medium uppercase tracking-[0.28em] text-soft">Arquitectura de Software 2026-1</span>
+                        </div>
                     </a>
                 </div>
-                <!-- Nav Links -->
                 <div class="hidden md:block">
                     <div class="ml-10 flex items-baseline space-x-2">
-                        <a href="{% url 'home' %}" class="text-slate-300 hover:text-white hover:bg-white/5 px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-300">
+                        <a href="{% url 'home' %}" class="text-mid hover:text-white hover:bg-white/10 px-4 py-2.5 rounded-lg text-sm font-semibold transition-all duration-300">
                             Catálogo
                         </a>
-                        <a href="{% url 'inventario' %}" class="text-slate-300 hover:text-white hover:bg-white/5 px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-300">
+                        <a href="{% url 'inventario' %}" class="text-mid hover:text-white hover:bg-white/10 px-4 py-2.5 rounded-lg text-sm font-semibold transition-all duration-300">
                             Inventario
                         </a>
                     </div>
@@ -134,18 +150,18 @@
     </main>
 
     <!-- Footer -->
-    <footer class="mt-auto border-t border-white/5 bg-slate-900/50 backdrop-blur-sm relative z-10">
+    <footer class="mt-auto border-t border-white/10 bg-slate-950/60 backdrop-blur-sm relative z-10">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex flex-col sm:flex-row items-center justify-between gap-4">
             <div class="flex items-center gap-2 group cursor-pointer">
-                <div class="w-6 h-6 rounded-md bg-gradient-to-br from-slate-700 to-slate-800 flex items-center justify-center border border-white/5">
-                    <span class="text-xs font-bold text-slate-300 group-hover:text-white transition-colors">TE</span>
+                <div class="w-6 h-6 rounded-md bg-gradient-to-br from-slate-700 to-slate-800 flex items-center justify-center border border-white/10">
+                    <span class="text-xs font-bold text-slate-200 group-hover:text-white transition-colors">TE</span>
                 </div>
-                <span class="text-slate-500 text-sm group-hover:text-slate-400 transition-colors">
-                    &copy; 2026 Tienda Grado Empresarial
+                <span class="text-soft text-sm group-hover:text-slate-200 transition-colors">
+                    &copy; 2026 Tienda EAFIT
                 </span>
             </div>
-            <div class="text-slate-600 text-xs">
-                Solid Architecture Demo
+            <div class="text-soft text-xs uppercase tracking-[0.24em]">
+                Arquitectura de Software 2026-1
             </div>
         </div>
     </footer>
