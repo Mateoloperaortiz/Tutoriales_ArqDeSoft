@@ -1,6 +1,14 @@
 # Django Clean Monolith Dockerizado
 
-Este proyecto ejecuta la aplicacion Django de la tienda sobre Docker, PostgreSQL 18 y Gunicorn. El runtime oficial pasa a ser el stack de `docker compose`.
+Este proyecto ejecuta la aplicacion Django de la tienda sobre Docker, PostgreSQL 18, Gunicorn y Nginx como proxy inverso. El runtime oficial pasa a ser el stack de `docker compose`.
+
+## Arquitectura
+
+```
+Internet -> Nginx (:80) -> Gunicorn/Django (:8000) -> PostgreSQL (:5432)
+```
+
+Nginx es el unico servicio expuesto a internet. Django queda aislado en la red interna de Docker, accesible solo a traves del proxy inverso.
 
 ## Versiones fijadas
 
@@ -10,6 +18,7 @@ Este proyecto ejecuta la aplicacion Django de la tienda sobre Docker, PostgreSQL
 - Django REST Framework `3.16.1`
 - Psycopg `3.3.3`
 - Gunicorn `25.1.0`
+- Nginx `1.25-alpine`
 
 ## Requisitos
 
@@ -54,11 +63,11 @@ docker compose up --build
 
 La aplicacion quedara disponible en:
 
-- Inicio: `http://localhost:8000/`
-- Inventario: `http://localhost:8000/inventario/`
-- API: `http://localhost:8000/api/v1/comprar/`
+- Inicio: `http://localhost/`
+- Inventario: `http://localhost/inventario/`
+- API: `http://localhost/api/v1/comprar/`
 
-El contenedor `web` espera a PostgreSQL, aplica migraciones y luego arranca Gunicorn.
+El contenedor `web` espera a PostgreSQL, aplica migraciones y luego arranca Gunicorn. Nginx atiende el puerto 80 y reenvia el trafico a Gunicorn por la red interna de Docker.
 
 ## Ejecutar tests en el contenedor
 
@@ -81,7 +90,7 @@ El comando imprime el `libro_id` creado o actualizado. Use ese valor para probar
 Ejemplo de compra exitosa:
 
 ```bash
-curl -X POST http://localhost:8000/api/v1/comprar/ \
+curl -X POST http://localhost/api/v1/comprar/ \
   -H "Content-Type: application/json" \
   -d '{"libro_id": <LIBRO_ID>, "direccion_envio": "Calle 123"}'
 ```
@@ -100,7 +109,7 @@ Si el libro no existe, la API responde `404`. Si no hay stock, responde `409`.
 ## Despliegue manual en EC2
 
 1. Cree una instancia Amazon Linux 2023 `t2.micro`.
-2. Abra los puertos `22` y `8000` en el Security Group.
+2. Abra los puertos `22` (SSH) y `80` (HTTP) en el Security Group. El puerto `8000` ya no debe estar expuesto: Django solo responde por la red interna de Docker.
 3. Conectese por SSH e instale Docker:
 
    ```bash
@@ -137,13 +146,21 @@ Si el libro no existe, la API responde `404`. Si no hay stock, responde `409`.
    docker compose exec web sh -c "python manage.py shell < seed_data.py"
    ```
 
-9. Pruebe la API desde su equipo:
+9. Pruebe la API desde su equipo (sin el puerto `:8000`, ahora Nginx enruta por el puerto 80):
 
    ```bash
-   curl -X POST http://<IP_PUBLICA_EC2>:8000/api/v1/comprar/ \
+   curl -X POST http://<IP_PUBLICA_EC2>/api/v1/comprar/ \
      -H "Content-Type: application/json" \
      -d '{"libro_id": <LIBRO_ID>, "direccion_envio": "AWS Academy"}'
    ```
+
+10. Verifique que los tres contenedores esten corriendo:
+
+    ```bash
+    docker ps
+    ```
+
+    Debe ver `nginx`, `web` y `db` en estado `Up`. Intentar acceder a `http://<IP_PUBLICA_EC2>:8000/` debe fallar con timeout; esa es la evidencia de que Django esta aislado.
 
 ## Comandos utiles
 
