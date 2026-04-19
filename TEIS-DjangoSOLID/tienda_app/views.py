@@ -1,13 +1,36 @@
 import datetime
 
-from django.views import View
-from django.shortcuts import render, get_object_or_404
+from django.db import transaction
 from django.http import HttpResponse
-from .models import Libro, Inventario, Orden
+from django.shortcuts import get_object_or_404, render
+from django.views import View
+
 from .domain.logic import CalculadorImpuestos
-from .services import CompraRapidaService, CompraService
 from .infra.factories import PaymentFactory
 from .infra.gateways import BancoNacionalProcesador
+from .models import Inventario, Libro, Orden, OrdenItem
+from .services import CompraRapidaService, CompraService
+
+
+def _build_purchase_context(libro, **extra_context):
+    context = {
+        "libro": libro,
+        "total": CalculadorImpuestos.obtener_total_con_iva(libro.precio),
+    }
+    context.update(extra_context)
+    return context
+
+
+def _crear_orden_legacy(libro, total):
+    # Compatibilidad temporal: las rutas legacy siguen rellenando Orden.libro.
+    orden = Orden.objects.create(libro=libro, total=total)
+    OrdenItem.objects.create(
+        orden=orden,
+        libro=libro,
+        cantidad=1,
+        precio_unitario=libro.precio,
+    )
+    return orden
 
 
 def inventario_view(request):
@@ -32,26 +55,21 @@ def compra_rapida_fbv(request, libro_id):
         # VIOLACION SRP: Logica de inventario en la vista
         inventario = Inventario.objects.get(libro=libro)
         if inventario.cantidad > 0:
-            # VIOLACION OCP: Calculo de negocio hardcoded
-            total = float(libro.precio) * 1.19
+            total = CalculadorImpuestos.obtener_total_con_iva(libro.precio)
 
             # VIOLACION DIP: Proceso de pago acoplado al file system
             with open("pagos_manuales.log", "a") as f:
                 f.write(f"[{datetime.datetime.now()}] Pago FBV: ${total}\n")
 
-            inventario.cantidad -= 1
-            inventario.save(update_fields=["cantidad"])
-            Orden.objects.create(libro=libro, total=total)
+            with transaction.atomic():
+                inventario.cantidad -= 1
+                inventario.save(update_fields=["cantidad"])
+                _crear_orden_legacy(libro, total)
 
             return HttpResponse(f"Compra exitosa: {libro.titulo}")
         return HttpResponse("Sin stock", status=400)
 
-    total_estimado = float(libro.precio) * 1.19
-    return render(
-        request,
-        "tienda_app/compra_rapida.html",
-        {"libro": libro, "total": total_estimado},
-    )
+    return render(request, "tienda_app/compra_rapida.html", _build_purchase_context(libro))
 
 
 class CompraRapidaView(View):
@@ -59,18 +77,18 @@ class CompraRapidaView(View):
 
     def get(self, request, libro_id):
         libro = get_object_or_404(Libro, id=libro_id)
-        total = float(libro.precio) * 1.19
-        return render(request, self.template_name, {"libro": libro, "total": total})
+        return render(request, self.template_name, _build_purchase_context(libro))
 
     def post(self, request, libro_id):
         # La logica de negocio aun reside aqui, pero separada del GET
         libro = get_object_or_404(Libro, id=libro_id)
         inv = Inventario.objects.get(libro=libro)
         if inv.cantidad > 0:
-            total = float(libro.precio) * 1.19
-            inv.cantidad -= 1
-            inv.save(update_fields=["cantidad"])
-            Orden.objects.create(libro=libro, total=total)
+            total = CalculadorImpuestos.obtener_total_con_iva(libro.precio)
+            with transaction.atomic():
+                inv.cantidad -= 1
+                inv.save(update_fields=["cantidad"])
+                _crear_orden_legacy(libro, total)
             return HttpResponse("Comprado via CBV")
         return HttpResponse("Error", status=400)
 
@@ -84,8 +102,7 @@ class CompraRapidaServiceView(View):
 
     def get(self, request, libro_id):
         libro = get_object_or_404(Libro, id=libro_id)
-        total = CalculadorImpuestos.obtener_total_con_iva(libro.precio)
-        return render(request, self.template_name, {"libro": libro, "total": total})
+        return render(request, self.template_name, _build_purchase_context(libro))
 
     def post(self, request, libro_id):
         servicio = self.setup_service()
@@ -99,7 +116,7 @@ class CompraRapidaServiceView(View):
 
 
 class CompraView(View):
-    template_name = "tienda_app/compra_rapida.html"
+    template_name = "tienda_app/compra.html"
 
     def setup_service(self):
         # ANTES: gateway = BancoNacionalProcesador()
@@ -109,8 +126,7 @@ class CompraView(View):
 
     def get(self, request, libro_id):
         libro = get_object_or_404(Libro, id=libro_id)
-        total = CalculadorImpuestos.obtener_total_con_iva(libro.precio)
-        return render(request, self.template_name, {"libro": libro, "total": total})
+        return render(request, self.template_name, _build_purchase_context(libro))
 
     def post(self, request, libro_id):
         servicio = self.setup_service()
@@ -122,6 +138,15 @@ class CompraView(View):
                 lista_productos=[libro],
                 direccion="Universidad EAFIT",
             )
-            return HttpResponse(mensaje)
+            return render(
+                request,
+                self.template_name,
+                _build_purchase_context(libro, mensaje_exito=mensaje),
+            )
         except Exception as exc:
-            return HttpResponse(str(exc), status=400)
+            return render(
+                request,
+                self.template_name,
+                _build_purchase_context(libro, error=str(exc)),
+                status=400,
+            )

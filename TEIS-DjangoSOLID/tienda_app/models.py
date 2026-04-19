@@ -14,7 +14,8 @@ class Inventario(models.Model):
 
 
 class Orden(models.Model):
-    # Campo opcional para mantener compatibilidad con Tutorial 01 (FBV Spaghetti).
+    # Campo legacy: se conserva como espejo de compatibilidad para flujos single-item.
+    # El detalle canonico de productos comprados vive en Orden.items.
     libro = models.ForeignKey(
         Libro,
         null=True,
@@ -26,3 +27,15 @@ class Orden(models.Model):
     direccion_envio = models.CharField(max_length=255, default="Dirección Local")
     total = models.DecimalField(max_digits=10, decimal_places=2)
     fecha_creacion = models.DateTimeField(auto_now_add=True)
+
+
+class OrdenItem(models.Model):
+    orden = models.ForeignKey(Orden, on_delete=models.CASCADE, related_name="items")
+    libro = models.ForeignKey(Libro, on_delete=models.PROTECT, related_name="orden_items")
+    cantidad = models.PositiveIntegerField()
+    precio_unitario = models.DecimalField(max_digits=10, decimal_places=2)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["orden", "libro"], name="unique_libro_por_orden"),
+        ]

@@ -9,8 +9,8 @@ from django.urls import reverse
 from .domain.logic import CalculadorImpuestos
 from .infra.factories import MockPaymentProcessor, PaymentFactory
 from .infra.gateways import BancoNacionalProcesador
-from .models import Inventario, Libro, Orden
-from .services import CompraService
+from .models import Inventario, Libro, Orden, OrdenItem
+from .services import CompraRapidaService, CompraService
 
 
 class ProcesadorPagoExitoso:
@@ -49,7 +49,16 @@ class CompraServiceTestCase(TestCase):
 
         orden = Orden.objects.get()
         self.assertEqual(orden.total, Decimal("297.50"))
+        self.assertIsNone(orden.libro)
         self.assertEqual(procesador.montos, [Decimal("297.50")])
+        self.assertEqual(orden.items.count(), 2)
+
+        item_a = orden.items.get(libro=self.libro_a)
+        item_b = orden.items.get(libro=self.libro_b)
+        self.assertEqual(item_a.cantidad, 2)
+        self.assertEqual(item_b.cantidad, 1)
+        self.assertEqual(item_a.precio_unitario, Decimal("100.00"))
+        self.assertEqual(item_b.precio_unitario, Decimal("50.00"))
 
         inventario_a = Inventario.objects.get(libro=self.libro_a)
         inventario_b = Inventario.objects.get(libro=self.libro_b)
@@ -85,6 +94,7 @@ class CompraServiceTestCase(TestCase):
             )
 
         self.assertEqual(Orden.objects.count(), 0)
+        self.assertEqual(OrdenItem.objects.count(), 0)
         self.assertEqual(Inventario.objects.get(libro=self.libro_a).cantidad, 2)
 
     def test_rechaza_compra_sin_productos(self):
@@ -109,6 +119,48 @@ class CompraServiceTestCase(TestCase):
         orden = Orden.objects.get()
         esperado = CalculadorImpuestos.obtener_total_con_iva(Decimal("100.00"))
         self.assertEqual(orden.total, esperado)
+
+    def test_rechaza_compra_si_falta_un_registro_de_inventario(self):
+        Inventario.objects.filter(libro=self.libro_b).delete()
+        servicio = CompraService(procesador_pago=ProcesadorPagoExitoso())
+
+        with self.assertRaisesMessage(ValueError, "No hay inventario configurado"):
+            servicio.ejecutar_proceso_compra(
+                usuario="Estudiante",
+                lista_productos=[self.libro_a, self.libro_b],
+                direccion="EAFIT",
+            )
+
+
+class CompraRapidaServiceTestCase(TestCase):
+    def setUp(self):
+        self.libro = Libro.objects.create(titulo="Libro Rapido", precio=Decimal("42.00"))
+        Inventario.objects.create(libro=self.libro, cantidad=1)
+
+    def test_compra_rapida_descuenta_stock_y_retorna_total(self):
+        servicio = CompraRapidaService(procesador_pago=ProcesadorPagoExitoso())
+
+        total = servicio.procesar(self.libro.id)
+
+        self.assertEqual(total, CalculadorImpuestos.obtener_total_con_iva(self.libro.precio))
+        self.assertEqual(Orden.objects.count(), 1)
+        orden = Orden.objects.get()
+        self.assertEqual(orden.libro, self.libro)
+        self.assertEqual(orden.usuario, "Invitado")
+        self.assertEqual(orden.direccion_envio, "Dirección Local")
+        self.assertEqual(orden.items.count(), 1)
+        item = orden.items.get()
+        self.assertEqual(item.libro, self.libro)
+        self.assertEqual(item.cantidad, 1)
+        self.assertEqual(item.precio_unitario, self.libro.precio)
+        self.assertEqual(Inventario.objects.get(libro=self.libro).cantidad, 0)
+
+    def test_compra_rapida_falla_si_no_hay_stock(self):
+        Inventario.objects.filter(libro=self.libro).update(cantidad=0)
+        servicio = CompraRapidaService(procesador_pago=ProcesadorPagoExitoso())
+
+        with self.assertRaisesMessage(ValueError, "No hay existencias."):
+            servicio.procesar(self.libro.id)
 
 
 class PaymentFactoryTestCase(TestCase):
@@ -148,6 +200,7 @@ class CompraAPITestCase(TestCase):
         self.assertEqual(response.status_code, 201)
         self.assertEqual(response.json()["estado"], "exito")
         self.assertEqual(Orden.objects.count(), 1)
+        self.assertEqual(Orden.objects.get().items.count(), 1)
         self.assertEqual(Inventario.objects.get(libro=self.libro).cantidad, 0)
         mock_get_processor.assert_called_once()
 
@@ -229,3 +282,85 @@ class CompraAPITestCase(TestCase):
 
         self.assertEqual(before_stock, 1)
         self.assertEqual(after_stock, 0)
+
+
+class CompraHTMLViewTestCase(TestCase):
+    def setUp(self):
+        self.libro = Libro.objects.create(titulo="Libro HTML", precio=Decimal("90.00"))
+        Inventario.objects.create(libro=self.libro, cantidad=2)
+
+    def test_home_redirige_a_inventario(self):
+        response = self.client.get(reverse("home"))
+
+        self.assertRedirects(response, reverse("inventario"))
+
+    def test_compra_regular_get_usa_template_dedicado(self):
+        response = self.client.get(reverse("finalizar_compra", args=[self.libro.id]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "tienda_app/compra.html")
+        self.assertEqual(response.context["total"], CalculadorImpuestos.obtener_total_con_iva(self.libro.precio))
+
+    @patch("tienda_app.views.PaymentFactory.get_processor")
+    def test_compra_regular_post_renderiza_exito_en_template(self, mock_get_processor):
+        mock_get_processor.return_value = ProcesadorPagoExitoso()
+
+        response = self.client.post(reverse("finalizar_compra", args=[self.libro.id]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "tienda_app/compra.html")
+        self.assertIn("Orden", response.context["mensaje_exito"])
+        self.assertEqual(Orden.objects.count(), 1)
+        self.assertEqual(Orden.objects.get().items.count(), 1)
+
+    @patch("tienda_app.views.PaymentFactory.get_processor")
+    def test_compra_regular_post_renderiza_error_en_template(self, mock_get_processor):
+        mock_get_processor.return_value = ProcesadorPagoFallido()
+
+        response = self.client.post(reverse("finalizar_compra", args=[self.libro.id]))
+
+        self.assertEqual(response.status_code, 400)
+        self.assertTemplateUsed(response, "tienda_app/compra.html")
+        self.assertEqual(response.context["error"], "Error en la pasarela de pagos.")
+
+    def test_compra_rapida_fbv_get_usa_calculo_canonico(self):
+        response = self.client.get(reverse("compra_rapida_fbv", args=[self.libro.id]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["total"], CalculadorImpuestos.obtener_total_con_iva(self.libro.precio))
+
+    def test_compra_rapida_cbv_get_usa_calculo_canonico(self):
+        response = self.client.get(reverse("compra_rapida_cbv", args=[self.libro.id]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["total"], CalculadorImpuestos.obtener_total_con_iva(self.libro.precio))
+
+    def test_compra_rapida_service_get_usa_calculo_canonico(self):
+        response = self.client.get(reverse("compra_rapida_service", args=[self.libro.id]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["total"], CalculadorImpuestos.obtener_total_con_iva(self.libro.precio))
+
+    def test_compra_rapida_fbv_post_crea_item_y_mantiene_libro_legacy(self):
+        response = self.client.post(reverse("compra_rapida_fbv", args=[self.libro.id]))
+
+        self.assertEqual(response.status_code, 200)
+        orden = Orden.objects.get()
+        self.assertEqual(orden.libro, self.libro)
+        self.assertEqual(orden.items.count(), 1)
+        item = orden.items.get()
+        self.assertEqual(item.libro, self.libro)
+        self.assertEqual(item.cantidad, 1)
+        self.assertEqual(item.precio_unitario, self.libro.precio)
+
+    def test_compra_rapida_cbv_post_crea_item_y_mantiene_libro_legacy(self):
+        response = self.client.post(reverse("compra_rapida_cbv", args=[self.libro.id]))
+
+        self.assertEqual(response.status_code, 200)
+        orden = Orden.objects.get()
+        self.assertEqual(orden.libro, self.libro)
+        self.assertEqual(orden.items.count(), 1)
+        item = orden.items.get()
+        self.assertEqual(item.libro, self.libro)
+        self.assertEqual(item.cantidad, 1)
+        self.assertEqual(item.precio_unitario, self.libro.precio)

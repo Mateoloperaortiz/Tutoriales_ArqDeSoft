@@ -4,7 +4,20 @@ from django.db import transaction
 
 from .domain.builders import OrdenBuilder
 from .domain.logic import CalculadorImpuestos
-from .models import Inventario, Libro
+from .models import Inventario, Libro, Orden, OrdenItem
+
+
+def _crear_items_orden(orden, conteo_por_libro, libros_por_id):
+    items = [
+        OrdenItem(
+            orden=orden,
+            libro=libros_por_id[libro_id],
+            cantidad=cantidad,
+            precio_unitario=libros_por_id[libro_id].precio,
+        )
+        for libro_id, cantidad in conteo_por_libro.items()
+    ]
+    OrdenItem.objects.bulk_create(items)
 
 
 class CompraRapidaService:
@@ -12,19 +25,29 @@ class CompraRapidaService:
         self.procesador_pago = procesador_pago
 
     def procesar(self, libro_id):
-        libro = Libro.objects.get(id=libro_id)
-        inv = Inventario.objects.get(libro=libro)
+        with transaction.atomic():
+            inv = (
+                Inventario.objects
+                .select_for_update()
+                .select_related("libro")
+                .get(libro_id=libro_id)
+            )
+            libro = inv.libro
 
-        if inv.cantidad <= 0:
-            raise ValueError("No hay existencias.")
+            if inv.cantidad <= 0:
+                raise ValueError("No hay existencias.")
 
-        total = CalculadorImpuestos.obtener_total_con_iva(libro.precio)
+            total = CalculadorImpuestos.obtener_total_con_iva(libro.precio)
+            orden = Orden.objects.create(libro=libro, total=total)
+            _crear_items_orden(orden, {libro.id: 1}, {libro.id: libro})
 
-        if self.procesador_pago.pagar(total):
-            inv.cantidad -= 1
-            inv.save(update_fields=["cantidad"])
-            return total
-        return None
+            if self.procesador_pago.pagar(total):
+                inv.cantidad -= 1
+                inv.save(update_fields=["cantidad"])
+                return total
+
+            orden.delete()
+            return None
 
 
 class CompraService:
@@ -64,6 +87,10 @@ class CompraService:
         with transaction.atomic():
             conteo_por_libro = self._contar_productos(lista_productos)
             inventarios_por_libro = self._obtener_inventarios_bloqueados(conteo_por_libro)
+            libros_por_id = {
+                libro_id: inventario.libro
+                for libro_id, inventario in inventarios_por_libro.items()
+            }
 
             # Uso del Builder: Semantica clara y validacion interna
             orden = (
@@ -73,6 +100,7 @@ class CompraService:
                 .para_envio(direccion)
                 .build()
             )
+            _crear_items_orden(orden, conteo_por_libro, libros_por_id)
 
             # Uso del Factory (inyectado): Cambio de comportamiento sin cambio de codigo
             if not self.procesador.pagar(orden.total):

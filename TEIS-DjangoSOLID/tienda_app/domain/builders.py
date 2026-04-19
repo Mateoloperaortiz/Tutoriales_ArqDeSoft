@@ -1,6 +1,5 @@
-from decimal import Decimal
-
 from ..models import Orden
+from .logic import CalculadorImpuestos
 
 class OrdenBuilder:
     def __init__(self):
@@ -27,9 +26,8 @@ class OrdenBuilder:
         if not self._usuario or not self._items:
             raise ValueError("Datos insuficientes para crear la orden.")
 
-        # Encapsulamos la logica de calculo
         subtotal = sum(p.precio for p in self._items)
-        total_con_iva = (subtotal * Decimal("1.19")).quantize(Decimal("0.01"))
+        total_con_iva = CalculadorImpuestos.obtener_total_con_iva(subtotal)
 
         orden = Orden.objects.create(
             usuario=self._usuario,

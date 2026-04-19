@@ -34,8 +34,15 @@ Este proyecto ejecuta la aplicacion Django de la tienda sobre Docker, PostgreSQL
    - `DB_PASSWORD`
    - `DB_HOST`
    - `DB_PORT`
+   - `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`
+   - `PAYMENT_PROVIDER`
 
-Para desarrollo local con Docker, el `.env.example` ya trae valores funcionales.
+Para desarrollo local con Docker, el `.env.example` ya trae valores funcionales. Mantenga alineadas las variables `DB_*` y `POSTGRES_*`, porque Django consume las primeras y el contenedor de PostgreSQL las segundas.
+
+`PAYMENT_PROVIDER` acepta estos valores:
+
+- `BANCO`: usa el gateway local que registra pagos en `pagos_locales_MATEO.log`.
+- `MOCK`: simula el cobro sin escribir pagos reales.
 
 ## Levantar el proyecto con Docker
 
@@ -47,6 +54,7 @@ docker compose up --build
 
 La aplicacion quedara disponible en:
 
+- Inicio: `http://localhost:8000/`
 - Inventario: `http://localhost:8000/inventario/`
 - API: `http://localhost:8000/api/v1/comprar/`
 
