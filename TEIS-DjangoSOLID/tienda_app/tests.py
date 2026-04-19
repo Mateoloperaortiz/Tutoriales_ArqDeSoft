@@ -284,6 +284,43 @@ class CompraAPITestCase(TestCase):
         self.assertEqual(after_stock, 0)
 
 
+class ProductosAPITestCase(TestCase):
+    def setUp(self):
+        self.libro_b = Libro.objects.create(titulo="Libro B", precio=Decimal("55.00"))
+        self.libro_a = Libro.objects.create(titulo="Libro A", precio=Decimal("40.00"))
+        Inventario.objects.create(libro=self.libro_b, cantidad=2)
+        Inventario.objects.create(libro=self.libro_a, cantidad=5)
+        self.url = reverse("api_productos")
+
+    def test_api_productos_lista_libros_y_stock(self):
+        response = self.client.get(self.url)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.json(),
+            [
+                {
+                    "id": self.libro_b.id,
+                    "titulo": "Libro B",
+                    "precio": "55.00",
+                    "stock_actual": 2,
+                },
+                {
+                    "id": self.libro_a.id,
+                    "titulo": "Libro A",
+                    "precio": "40.00",
+                    "stock_actual": 5,
+                },
+            ],
+        )
+
+    def test_api_productos_mantiene_orden_estable_por_id(self):
+        response = self.client.get(self.url)
+
+        ids = [item["id"] for item in response.json()]
+        self.assertEqual(ids, sorted(ids))
+
+
 class CompraHTMLViewTestCase(TestCase):
     def setUp(self):
         self.libro = Libro.objects.create(titulo="Libro HTML", precio=Decimal("90.00"))

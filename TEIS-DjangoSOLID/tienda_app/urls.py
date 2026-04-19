@@ -8,7 +8,7 @@ from .views import (
     CompraView,
     inventario_view,
 )
-from tienda_app.api.views import CompraAPIView
+from tienda_app.api.views import CompraAPIView, ProductosAPIView
 
 urlpatterns = [
     path("", catalogo_view, name="home"),
@@ -17,5 +17,6 @@ urlpatterns = [
     path("compra-rapida-cbv/<int:libro_id>/", CompraRapidaView.as_view(), name="compra_rapida_cbv"),
     path("compra-rapida-service/<int:libro_id>/", CompraRapidaServiceView.as_view(), name="compra_rapida_service"),
     path('compra/<int:libro_id>/', CompraView.as_view(), name='finalizar_compra'),
+    path("api/v1/productos/", ProductosAPIView.as_view(), name="api_productos"),
     path("api/v1/comprar/", CompraAPIView.as_view(), name="api_comprar"),
 ]
